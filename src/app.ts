@@ -1,45 +1,40 @@
 import cors from "cors";
 import express, {
   type Application,
-  type NextFunction,
   type Request,
   type Response,
 } from "express";
 import config from "./config/index.js";
-import { globalErrorHandler, createError } from "./middlewire/globalErrorHandler.js";
+import { globalErrorHandler } from "./middlewire/globalErrorHandler.js";
 import logger from "./middlewire/logger.js";
-import { authRoute } from "./modules/auth____JWT/auth.route.js";
-import { issueRoute } from "./modules/issues/issue.route.js";
 import { userRoute } from "./modules/users/user.route.js";
+import { authRoute } from "./modules/auth___JWT/auth.route.js";
+import { issueRoute } from "./modules/issues/issue.route.js";
+
 
 const app: Application = express();
 
-//!Middlewires
+//!Middlewares
 app.use(express.json());
-app.use(express.text());
-app.use(express.urlencoded({ extended: true }));
-
-//Logger MiddleWire
 app.use(logger);
 
-//CORS
+//!CORS
 app.use(
   cors({
-    origin: config.client_url === "*" ? true : config.client_url,
-    credentials: true,
+    origin: config.client_url,
   }),
 );
 
-//User registration route
-app.use("/api/auth", userRoute);
+//!User registration route
+app.use("/api/auth",userRoute);
 
-//Authentication and JWT process
+//!User login route
 app.use("/api/auth", authRoute);
 
-//Issues route
+//!Issue routes
 app.use("/api/issues", issueRoute);
 
-//!SERVER CHECK
+//!Server check
 app.get("/", (req: Request, res: Response) => {
   res.status(200).json({
     success: true,
@@ -48,14 +43,12 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 //!Not found route
-app.use((req: Request, res: Response, next: NextFunction) => {
-  next(
-    createError(
-      404,
-      "Route not found",
-      `${req.method} ${req.originalUrl} does not exist`,
-    ),
-  );
+app.use((req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    message: "Route not found.",
+    errors: `${req.method} ${req.originalUrl} does not exist`,
+  });
 });
 
 //!Global error handler
