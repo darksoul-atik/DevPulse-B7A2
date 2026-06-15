@@ -1,19 +1,30 @@
 {
   "name": "module-assignment",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "DevPulse - Internal Tech Issue and Feature Tracker API",
+  "main": "dist/server.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/darksoul-atik/DevPulse-B7A2.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "nodejs",
+    "typescript",
+    "express",
+    "postgresql",
+    "devpulse"
+  ],
+  "author": "Atik",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/darksoul-atik/DevPulse-B7A2/issues"
   },
@@ -32,7 +43,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.9.3",
+    "@types/node": "^24.0.0",
     "@types/pg": "^8.20.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3"
