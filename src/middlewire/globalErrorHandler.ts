@@ -1,7 +1,12 @@
 import type { NextFunction, Request, Response } from "express";
 
+export interface ICustomError extends Error {
+  statusCode?: number;
+  errors?: string;
+}
+
 export const globalErrorHandler = (
-  error: any,
+  error: ICustomError,
   req: Request,
   res: Response,
   next: NextFunction,
@@ -11,6 +16,9 @@ export const globalErrorHandler = (
   res.status(statusCode).json({
     success: false,
     message: error.message || "Something went wrong",
-    error,
+    errors:
+      error.errors ||
+      error.message ||
+      "Internal server error",
   });
 };

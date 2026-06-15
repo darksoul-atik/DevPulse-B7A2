@@ -1,5 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { pool } from "../../db/index.js";
+import type { ICustomError } from "../../middlewire/globalErrorHandler.js";
 import {
   ISSUE_STATUS,
   ISSUE_TYPE,
@@ -20,7 +21,10 @@ const getValidIssueId = (id: string) => {
   const issueId = Number(id);
 
   if (!Number.isInteger(issueId) || issueId <= 0) {
-    const error: any = new Error("Issue id must be a positive number");
+    const error = new Error(
+      "Issue id must be a positive number",
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -35,36 +39,63 @@ const checkIssueData = (
 ) => {
   //!Checking title
   if (payLoad.title !== undefined) {
-    if (!payLoad.title.trim()) {
-      const error: any = new Error("Title is required");
+    if (typeof payLoad.title !== "string") {
+      const error = new Error(
+        "Title must be a string",
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.BAD_REQUEST;
       throw error;
     }
 
-    if (payLoad.title.trim().length > 150) {
-      const error: any = new Error(
+    const title = payLoad.title.trim();
+
+    if (!title) {
+      const error = new Error("Title is required") as ICustomError;
+
+      error.statusCode = StatusCodes.BAD_REQUEST;
+      throw error;
+    }
+
+    if (title.length > 150) {
+      const error = new Error(
         "Title cannot be more than 150 characters",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.BAD_REQUEST;
       throw error;
     }
   } else if (!isUpdate) {
-    const error: any = new Error("Title is required");
+    const error = new Error("Title is required") as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
 
   //!Checking description
   if (payLoad.description !== undefined) {
-    if (payLoad.description.trim().length < 20) {
-      const error: any = new Error(
+    if (typeof payLoad.description !== "string") {
+      const error = new Error(
+        "Description must be a string",
+      ) as ICustomError;
+
+      error.statusCode = StatusCodes.BAD_REQUEST;
+      throw error;
+    }
+
+    const description = payLoad.description.trim();
+
+    if (description.length < 20) {
+      const error = new Error(
         "Description must be at least 20 characters",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.BAD_REQUEST;
       throw error;
     }
   } else if (!isUpdate) {
-    const error: any = new Error("Description is required");
+    const error = new Error("Description is required") as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -75,14 +106,16 @@ const checkIssueData = (
       payLoad.type !== ISSUE_TYPE.bug &&
       payLoad.type !== ISSUE_TYPE.feature_request
     ) {
-      const error: any = new Error(
+      const error = new Error(
         "Type must be bug or feature_request",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.BAD_REQUEST;
       throw error;
     }
   } else if (!isUpdate) {
-    const error: any = new Error("Type is required");
+    const error = new Error("Type is required") as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -94,9 +127,10 @@ const checkIssueData = (
       payLoad.status !== ISSUE_STATUS.in_progress &&
       payLoad.status !== ISSUE_STATUS.resolved
     ) {
-      const error: any = new Error(
+      const error = new Error(
         "Status must be open, in_progress or resolved",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.BAD_REQUEST;
       throw error;
     }
@@ -127,7 +161,10 @@ const createIssueIntoDB = async (
   const newIssue = result.rows[0];
 
   if (!newIssue) {
-    const error: any = new Error("Issue could not be created");
+    const error = new Error(
+      "Issue could not be created",
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
     throw error;
   }
@@ -141,36 +178,41 @@ const getAllIssuesFromDB = async (queryData: IIssueQuery) => {
   const type = queryData.type;
   const status = queryData.status;
 
-  //!Checking sort
+  //!Checking sort value
   if (sort !== "newest" && sort !== "oldest") {
-    const error: any = new Error("Sort must be newest or oldest");
+    const error = new Error(
+      "Sort must be newest or oldest",
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
 
-  //!Checking type
+  //!Checking type value
   if (
     type !== undefined &&
     type !== ISSUE_TYPE.bug &&
     type !== ISSUE_TYPE.feature_request
   ) {
-    const error: any = new Error(
+    const error = new Error(
       "Type must be bug or feature_request",
-    );
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
 
-  //!Checking status
+  //!Checking status value
   if (
     status !== undefined &&
     status !== ISSUE_STATUS.open &&
     status !== ISSUE_STATUS.in_progress &&
     status !== ISSUE_STATUS.resolved
   ) {
-    const error: any = new Error(
+    const error = new Error(
       "Status must be open, in_progress or resolved",
-    );
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -178,11 +220,13 @@ const getAllIssuesFromDB = async (queryData: IIssueQuery) => {
   const conditions: string[] = [];
   const values: string[] = [];
 
+  //!Adding type filter
   if (type) {
     values.push(type);
     conditions.push(`type = $${values.length}`);
   }
 
+  //!Adding status filter
   if (status) {
     values.push(status);
     conditions.push(`status = $${values.length}`);
@@ -208,15 +252,9 @@ const getAllIssuesFromDB = async (queryData: IIssueQuery) => {
   }
 
   //!Collecting reporter ids
-  const reporterIds: number[] = [];
+  const reporterIds = issues.map((issue) => issue.reporter_id);
 
-  for (const issue of issues) {
-    if (!reporterIds.includes(issue.reporter_id)) {
-      reporterIds.push(issue.reporter_id);
-    }
-  }
-
-  //!Getting reporters without JOIN
+  //!Getting reporter data without SQL JOIN
   const reporters =
     await userService.getUsersByIdsFromDB(reporterIds);
 
@@ -228,9 +266,10 @@ const getAllIssuesFromDB = async (queryData: IIssueQuery) => {
     );
 
     if (!reporter) {
-      const error: any = new Error(
+      const error = new Error(
         "Reporter information could not be found",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
       throw error;
     }
@@ -262,20 +301,22 @@ const getSingleIssueFromDB = async (id: string) => {
   const issue = result.rows[0];
 
   if (!issue) {
-    const error: any = new Error("Issue not found");
+    const error = new Error("Issue not found") as ICustomError;
+
     error.statusCode = StatusCodes.NOT_FOUND;
     throw error;
   }
 
-  //!Getting reporter without JOIN
+  //!Getting reporter data without SQL JOIN
   const reporter = await userService.getUserByIdFromDB(
     issue.reporter_id,
   );
 
   if (!reporter) {
-    const error: any = new Error(
+    const error = new Error(
       "Reporter information could not be found",
-    );
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.INTERNAL_SERVER_ERROR;
     throw error;
   }
@@ -301,12 +342,23 @@ const updateIssueIntoDB = async (
   loggedInUser: IJwtUser,
 ) => {
   const issueId = getValidIssueId(id);
+
+  if (!payLoad || typeof payLoad !== "object" || Array.isArray(payLoad)) {
+    const error = new Error(
+      "A valid request body is required",
+    ) as ICustomError;
+
+    error.statusCode = StatusCodes.BAD_REQUEST;
+    throw error;
+  }
+
   const receivedFields = Object.keys(payLoad);
 
   if (receivedFields.length === 0) {
-    const error: any = new Error(
+    const error = new Error(
       "At least one field is required for update",
-    );
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -323,9 +375,10 @@ const updateIssueIntoDB = async (
   );
 
   if (hasInvalidField) {
-    const error: any = new Error(
+    const error = new Error(
       "Only title, description, type and status can be updated",
-    );
+    ) as ICustomError;
+
     error.statusCode = StatusCodes.BAD_REQUEST;
     throw error;
   }
@@ -341,33 +394,37 @@ const updateIssueIntoDB = async (
   const oldIssue = oldIssueResult.rows[0];
 
   if (!oldIssue) {
-    const error: any = new Error("Issue not found");
+    const error = new Error("Issue not found") as ICustomError;
+
     error.statusCode = StatusCodes.NOT_FOUND;
     throw error;
   }
 
-  //!Checking contributor permissions
+  //!Checking contributor permission
   if (loggedInUser.role === USER_ROLE.contributor) {
     if (oldIssue.reporter_id !== loggedInUser.id) {
-      const error: any = new Error(
+      const error = new Error(
         "Contributors can update only their own issues",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.FORBIDDEN;
       throw error;
     }
 
     if (oldIssue.status !== ISSUE_STATUS.open) {
-      const error: any = new Error(
+      const error = new Error(
         "Contributors can update an issue only while its status is open",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.CONFLICT;
       throw error;
     }
 
     if (payLoad.status !== undefined) {
-      const error: any = new Error(
+      const error = new Error(
         "Contributors cannot change issue status",
-      );
+      ) as ICustomError;
+
       error.statusCode = StatusCodes.FORBIDDEN;
       throw error;
     }
@@ -412,7 +469,8 @@ const updateIssueIntoDB = async (
   const updatedIssue = result.rows[0];
 
   if (!updatedIssue) {
-    const error: any = new Error("Issue not found");
+    const error = new Error("Issue not found") as ICustomError;
+
     error.statusCode = StatusCodes.NOT_FOUND;
     throw error;
   }
@@ -434,12 +492,11 @@ const deleteIssueFromDB = async (id: string) => {
   );
 
   if (result.rows.length === 0) {
-    const error: any = new Error("Issue not found");
+    const error = new Error("Issue not found") as ICustomError;
+
     error.statusCode = StatusCodes.NOT_FOUND;
     throw error;
   }
-
-  return result;
 };
 
 export const issueService = {
